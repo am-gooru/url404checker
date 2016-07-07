@@ -79,11 +79,11 @@ class Configuration {
         return configuration."http.timeout.seconds"
     }
 
-    public def getCommitBatchSize() {
+    public def getDbPoolSize() {
         if (!initialized) {
             throw new IllegalStateException()
         }
-        return configuration."commit.batch.size"
+        return configuration."db.pool.size"
 
     }
 

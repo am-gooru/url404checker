@@ -20,13 +20,9 @@
         </encoder>
     </appender>
 
-    <logger name="org.gooru" level="debug" additivity="false">
+    <logger name="org.gooru" level="info" additivity="false">
         <appender-ref ref="STDOUT"/>
     </logger>
-    <logger name="groovy.sql" level="trace" additivity="false">
-        <appender-ref ref="STDOUT"/>
-    </logger>
-
 
 
     <root level="info">
