@@ -23,8 +23,9 @@ class JobProcessor {
 
                 new DbStatusUpdater().updateStatus(result)
             } else {
-                // TODO remove this return
-                return
+                // Did not find anything. Clean things up as next time we have to start from scratch
+                context.offset = 0
+                LOGGER.info "Done with existing processing, now going to wait for '{}' seconds", Configuration.instance.getIntervalBetweenJobs()
                 sleep(Configuration.instance.getIntervalBetweenJobs() * 1000)
             }
         }
