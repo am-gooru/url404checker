@@ -1,7 +1,10 @@
 package org.gooru.jobs.processors
 
 import groovy.util.logging.Slf4j
+import groovyx.gpars.GParsPool
 import org.gooru.jobs.config.Configuration
+
+import java.sql.Timestamp
 
 /**
  * @author ashish on 6/7/16.
@@ -19,46 +22,53 @@ class StatusChecker {
      */
 
     def checkStatus(def idUrlMapInList) {
-        List result = []
-        idUrlMapInList.each { idUrlMap ->
-            Map resultDatum = [id        : idUrlMap.id, http_status: 200, location_redirect: null, http_method: 'GET', xframe_options: null,
-                               job_status: 'COMPLETED', job_ran_at: null, http_host: null, http_port: null, http_protocol: null,
-                               http_query: null, http_path: null
-            ]
-            LOGGER.debug "Checking status of url '{}'", idUrlMap.url
-            def status = checkUrlWithHead(idUrlMap.url)
+        GParsPool.withPool(Configuration.instance.getThreadPoolSize()) {
+            List result = idUrlMapInList.collectParallel { idUrlMap ->
+                def resultDatum = checkIndividualStatus(idUrlMap)
+                LOGGER.debug "Result for '{}' is '{}'", idUrlMap, resultDatum
+                resultDatum
+            }
+            result
+        }
+    }
+
+    private def checkIndividualStatus(idUrlMap) {
+        Map resultDatum = [id        : idUrlMap.id, http_status: 200, http_method: 'GET', xframe_options: null,
+                           job_status: 'COMPLETED', job_ran_at: null, http_host: null, http_port: null, http_protocol: null,
+                           http_query: null, http_path: null
+        ]
+        LOGGER.debug "Checking status of url '{}'", idUrlMap.url
+        def status = checkUrlWithHead(idUrlMap.url)
+        if (status.success) {
+            LOGGER.debug "Status of id '{}' url '{}' is successful with HEAD", idUrlMap.id, idUrlMap.url
+            resultDatum.http_status = status.http_status
+            resultDatum.location_redirect = status.location_redirect
+            resultDatum.http_method = 'HEAD'
+            resultDatum.xframe_options = status.xframe_options
+            resultDatum.job_status = 'COMPLETED'
+            resultDatum.job_ran_at = new Timestamp(System.currentTimeMillis())
+            parseUrl(idUrlMap.url, resultDatum)
+        } else {
+            status = checkUrlWithGet(idUrlMap.url)
             if (status.success) {
-                LOGGER.debug "Status of id '{}' url '{}' is successful with HEAD", idUrlMap.id, idUrlMap.url
+                LOGGER.debug "Status of id '{}' url '{}' is successful with GET", idUrlMap.id, idUrlMap.url
                 resultDatum.http_status = status.http_status
                 resultDatum.location_redirect = status.location_redirect
                 resultDatum.http_method = 'HEAD'
                 resultDatum.xframe_options = status.xframe_options
                 resultDatum.job_status = 'COMPLETED'
-                resultDatum.job_ran_at = new java.sql.Timestamp(System.currentTimeMillis())
                 parseUrl(idUrlMap.url, resultDatum)
             } else {
-                status = checkUrlWithGet(idUrlMap.url)
-                if (status.success) {
-                    LOGGER.debug "Status of id '{}' url '{}' is successful with GET", idUrlMap.id, idUrlMap.url
-                    resultDatum.http_status = status.http_status
-                    resultDatum.location_redirect = status.location_redirect
-                    resultDatum.http_method = 'HEAD'
-                    resultDatum.xframe_options = status.xframe_options
-                    resultDatum.job_status = 'COMPLETED'
-                    parseUrl(idUrlMap.url, resultDatum)
-                } else {
-                    LOGGER.debug "Status of id '{}' url '{}' failed", idUrlMap.id, idUrlMap.url
-                    resultDatum.http_status = null
-                    resultDatum.location_redirect = null
-                    resultDatum.http_method = null
-                    resultDatum.xframe_options = null
-                    resultDatum.job_status = 'FAILED'
-                    resultDatum.job_ran_at = new java.sql.Timestamp(System.currentTimeMillis())
-                }
+                LOGGER.debug "Status of id '{}' url '{}' failed", idUrlMap.id, idUrlMap.url
+                resultDatum.http_status = null
+                resultDatum.location_redirect = null
+                resultDatum.http_method = null
+                resultDatum.xframe_options = null
+                resultDatum.job_status = 'FAILED'
+                resultDatum.job_ran_at = new Timestamp(System.currentTimeMillis())
             }
-            result.add(resultDatum)
         }
-        result
+        resultDatum
     }
 
     def checkUrlWithHead(def url) {
@@ -66,6 +76,7 @@ class StatusChecker {
         try {
             HttpURLConnection con =
                     (HttpURLConnection) new URL(url).openConnection()
+            con.setRequestProperty("User-Agent", "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2")
             con.setRequestMethod("HEAD")
             con.setConnectTimeout(Configuration.instance.getHttpTimeout() * 1000)
             def responseCode
@@ -75,7 +86,8 @@ class StatusChecker {
                     status.success = true
                     status.http_status = responseCode
                     status.xframe_options = con.getHeaderField('X-Frame-Options')
-                }  else {
+                } else {
+                    LOGGER.warn "Http communication failed for HEAD request with URL: '{}' with responseCode: '{}'", url, responseCode
                     status.success = false
                 }
             } catch (java.net.SocketTimeoutException exception) {
@@ -95,6 +107,7 @@ class StatusChecker {
         try {
             HttpURLConnection con =
                     (HttpURLConnection) new URL(url).openConnection()
+            con.setRequestProperty("User-Agent", "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2")
             con.setRequestMethod("GET")
             con.setInstanceFollowRedirects(false)
             con.setConnectTimeout(Configuration.instance.getHttpTimeout() * 1000)
@@ -103,11 +116,7 @@ class StatusChecker {
                 responseCode = con.getResponseCode()
                 status.http_status = responseCode
                 status.xframe_options = con.getHeaderField('X-Frame-Options')
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    status.success = true
-                } else {
-                    status.success = false
-                }
+                status.success = true
             } catch (java.net.SocketTimeoutException exception) {
                 LOGGER.warn "Timeout happended for url '{}'", url, exception
                 status.success = false
