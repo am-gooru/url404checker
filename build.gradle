@@ -29,6 +29,7 @@ ext {
     logbackVersion = '1.0.13'
     postgresVersion = '9.4-1206-jdbc42'
     groovyVersion = '2.4.4'
+    gparsVersion = 'gpars:1.2.1'
     spockVersion = '1.0-groovy-2.4'
 }
 
@@ -49,6 +50,8 @@ dependencies {
     // Other dependencies
     compile "ch.qos.logback:logback-classic:${logbackVersion}"
     compile "org.postgresql:postgresql:${postgresVersion}"
+    compile "org.codehaus.gpars:${gparsVersion}"
+
 
     // We use the awesome Spock testing and specification framework
     testCompile "org.spockframework:spock-core:${spockVersion}"

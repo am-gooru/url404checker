@@ -63,13 +63,10 @@ class StatusChecker {
 
     def checkUrlWithHead(def url) {
         def status = [success: false, http_status: null, location_redirect: null, xframe_options: null]
-        // TODO: Verify andling of both http and https
         try {
-            // HttpURLConnection.setFollowRedirects(false)
             HttpURLConnection con =
                     (HttpURLConnection) new URL(url).openConnection()
             con.setRequestMethod("HEAD")
-            con.setInstanceFollowRedirects(false)
             con.setConnectTimeout(Configuration.instance.getHttpTimeout() * 1000)
             def responseCode
             try {
@@ -78,18 +75,8 @@ class StatusChecker {
                     status.success = true
                     status.http_status = responseCode
                     status.xframe_options = con.getHeaderField('X-Frame-Options')
-                } else if (responseCode == HttpURLConnection.HTTP_BAD_METHOD) {
+                }  else {
                     status.success = false
-                } else if (responseCode == HttpURLConnection.HTTP_MOVED_PERM || responseCode ==
-                        HttpURLConnection.HTTP_MOVED_TEMP || responseCode == HttpURLConnection.HTTP_SEE_OTHER) {
-                    status.success = true
-                    status.http_status = responseCode
-                    status.location_redirect = con.getHeaderField('Location')
-                    status.xframe_options = con.getHeaderField('X-Frame-Options')
-                } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-                    status = false
-                } else {
-                    status = false
                 }
             } catch (java.net.SocketTimeoutException exception) {
                 LOGGER.warn "Timeout happended for url '{}'", url, exception
@@ -105,9 +92,7 @@ class StatusChecker {
 
     def checkUrlWithGet(def url) {
         def status = [success: false, http_status: null, location_redirect: null, xframe_options: null]
-        // TODO: Verify andling of both http and https
         try {
-            // HttpURLConnection.setFollowRedirects(false)
             HttpURLConnection con =
                     (HttpURLConnection) new URL(url).openConnection()
             con.setRequestMethod("GET")
@@ -116,35 +101,19 @@ class StatusChecker {
             def responseCode
             try {
                 responseCode = con.getResponseCode()
+                status.http_status = responseCode
+                status.xframe_options = con.getHeaderField('X-Frame-Options')
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     status.success = true
-                    status.http_status = responseCode
-                    status.xframe_options = con.getHeaderField('X-Frame-Options')
-                } else if (responseCode == HttpURLConnection.HTTP_BAD_METHOD) {
-                    status.success = false
-                    status.http_status = responseCode
-                    status.xframe_options = con.getHeaderField('X-Frame-Options')
-                } else if (responseCode == HttpURLConnection.HTTP_MOVED_PERM || responseCode ==
-                        HttpURLConnection.HTTP_MOVED_TEMP || responseCode == HttpURLConnection.HTTP_SEE_OTHER) {
-                    status.success = true
-                    status.http_status = responseCode
-                    status.location_redirect = con.getHeaderField('Location')
-                    status.xframe_options = con.getHeaderField('X-Frame-Options')
-                } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-                    status.success = false
-                    status.http_status = responseCode
-                    status.xframe_options = con.getHeaderField('X-Frame-Options')
                 } else {
                     status.success = false
-                    status.http_status = responseCode
-                    status.xframe_options = con.getHeaderField('X-Frame-Options')
                 }
             } catch (java.net.SocketTimeoutException exception) {
                 LOGGER.warn "Timeout happended for url '{}'", url, exception
                 status.success = false
             }
         } catch (Exception e) {
-            LOGGER.warn "Exception while checking with HEAD request", e
+            LOGGER.warn "Exception while checking with GET request", e
             status.success = false
         }
 

@@ -12,7 +12,7 @@ import java.sql.SQLException
  */
 @Slf4j("LOGGER")
 class DbStatusUpdater {
-    private static String updateStatement = '''update url_checker set http_status = :http_status, location_redirect = :location_redirect, http_method = :http_method,
+    private static String updateStatement = '''update url_checker set http_status = :http_status, http_method = :http_method,
             xframe_options = :xframe_options, job_status = :job_status, job_ran_at = :job_ran_at, http_host = :http_host, http_port = :http_port,
             http_protocol = :http_protocol, http_path = :http_path, http_query = :http_query where id = :id'''
 
