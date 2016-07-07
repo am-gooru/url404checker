@@ -15,7 +15,6 @@ buildscript {
 
 // Apply the groovy plugin to add support for Groovy
 apply plugin: 'groovy'
-apply plugin: 'idea'
 apply plugin: "com.github.johnrengelman.shadow"
 
 // In this section you declare where to find the dependencies of your project
@@ -25,12 +24,12 @@ repositories {
     jcenter()
 }
 ext {
-    vertxVersion = '3.2.1'
     slf4jVersion = '1.7.12'
     junitVersion = '4.12'
     logbackVersion = '1.0.13'
-    hikariVersion = '2.4.3'
     postgresVersion = '9.4-1206-jdbc42'
+    groovyVersion = '2.4.4'
+    spockVersion = '1.0-groovy-2.4'
 }
 
 sourceCompatibility = 1.8
@@ -46,12 +45,13 @@ defaultTasks 'shadowJar'
 // In this section you declare the dependencies for your production and test code
 dependencies {
     // We use the latest groovy 2.x version for building this library
-    compile 'org.codehaus.groovy:groovy-all:2.4.4'
+    compile "org.codehaus.groovy:groovy-all:${groovyVersion}"
     // Other dependencies
     compile "ch.qos.logback:logback-classic:${logbackVersion}"
+    compile "org.postgresql:postgresql:${postgresVersion}"
 
     // We use the awesome Spock testing and specification framework
-    testCompile 'org.spockframework:spock-core:1.0-groovy-2.4'
+    testCompile "org.spockframework:spock-core:${spockVersion}"
     testCompile 'junit:junit:4.12'
 }
 

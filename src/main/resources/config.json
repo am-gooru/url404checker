@@ -1,0 +1,10 @@
+{
+  "db.username": "nucleus",
+  "db.password": "nucleus",
+  "db.url": "jdbc:postgresql://localhost:5432/nucleus",
+  "batch.size": 1000,
+  "thread.pool.size": 5,
+  "interval.between.jobs.seconds": 600,
+  "http.timeout.seconds": 30,
+  "commit.batch.size": 30
+}
